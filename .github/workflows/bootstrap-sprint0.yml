@@ -1,0 +1,66 @@
+name: Bootstrap Sprint 0 source
+
+on:
+  push:
+    branches: [sprint0-refactor]
+
+permissions:
+  contents: write
+
+jobs:
+  expand-test-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sprint0-refactor
+          fetch-depth: 0
+
+      - name: Restore existing visual assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          assets="$RUNNER_TEMP/original"
+          mkdir -p "$assets"
+          unzip -q source.zip -d "$assets"
+          root=$(find "$assets" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+          mkdir -p app/static/assets
+          cp -a "$root/app/static/assets/." app/static/assets/
+
+      - name: Expand validated Sprint 0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/sprint0"
+          mkdir -p "$stage"
+          tar -xJf artifacts/mwlc_sprint0_source.tar.xz -C "$stage"
+          shopt -s dotglob nullglob
+          cp -a "$stage"/* ./
+          rm -f source.zip
+          rm -f artifacts/mwlc_sprint0_source.tar.xz
+          rm -f .github/workflows/expand-sprint0.yml
+          rm -f .sprint0-trigger
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest httpx
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Commit normal source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Expand Sprint 0 application source"
+          git push origin HEAD:sprint0-refactor
