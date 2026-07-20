@@ -16,8 +16,4 @@ if not MARKER.exists():
         bundle.extractall(EXTRACT_DIR)
     MARKER.touch()
 
-sys.path.insert(0, str(EXTRACT_DIR))
-
-from app.main import app  # noqa: E402
-
-__all__ = ["app"]
+sys.path.insert(
