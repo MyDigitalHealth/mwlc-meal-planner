@@ -29,8 +29,8 @@ def _prepare_application() -> None:
 
     # Reconstruct and verify the reviewed Phase 2 source overlay.
     parts = sorted(PARTS_DIR.glob("part*"))
-    if len(parts) != 8:
-        raise RuntimeError(f"Expected 8 Phase 2 package parts, found {len(parts)}")
+    if len(parts) != 9:
+        raise RuntimeError(f"Expected 9 Phase 2 package parts, found {len(parts)}")
 
     encoded = b"".join(path.read_bytes().strip() for path in parts)
     payload = base64.b64decode(encoded, validate=True)
