@@ -1,54 +1,47 @@
-"""Vercel serverless entry point for the MWLC Meal Planner."""
+"""Vercel serverless entry point for the MWLC Meal Planner Sprint 0 release."""
 from __future__ import annotations
 
+import base64
+import hashlib
+import io
 import sys
+import tarfile
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-ARCHIVE = ROOT / "source.zip"
-EXTRACT_DIR = Path("/tmp/mwlc_meal_planner")
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+BASE_ARCHIVE = REPOSITORY_ROOT / "source.zip"
+PARTS_DIR = REPOSITORY_ROOT / "artifacts" / "sprint0_parts"
+EXTRACT_DIR = Path("/tmp/mwlc_meal_planner_sprint0")
 MARKER = EXTRACT_DIR / ".ready"
+EXPECTED_SHA256 = "8dc512007b3865feb565eb8b30663e608bdc22802ff394842d52976326849eba"
 
-if not MARKER.exists():
+
+def _prepare_application() -> None:
+    if MARKER.exists() and MARKER.read_text(encoding="utf-8").strip() == EXPECTED_SHA256:
+        return
+
     EXTRACT_DIR.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(ARCHIVE) as bundle:
+
+    # Retain the existing licensed demonstration photography and brand assets.
+    with zipfile.ZipFile(BASE_ARCHIVE) as bundle:
         bundle.extractall(EXTRACT_DIR)
-    MARKER.touch()
 
+    # Reconstruct and verify the reviewed Sprint 0 source overlay.
+    encoded = b"".join(path.read_bytes().strip() for path in sorted(PARTS_DIR.glob("part*")))
+    payload = base64.b64decode(encoded, validate=True)
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != EXPECTED_SHA256:
+        raise RuntimeError(f"Sprint 0 checksum mismatch: expected {EXPECTED_SHA256}, got {digest}")
+
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:xz") as package:
+        package.extractall(EXTRACT_DIR)
+
+    MARKER.write_text(digest, encoding="utf-8")
+
+
+_prepare_application()
 sys.path.insert(0, str(EXTRACT_DIR))
-
-# Patch the compact recipe-page macro cards without changing the larger
-# dashboard cards used elsewhere in the guide.
-import app.pdf_generator as pdf_generator  # noqa: E402
-
-_original_metric_card = pdf_generator.metric_card
-
-
-def _metric_card(c, x, y, w, h, value, label, fill=pdf_generator.PALE_BLUE):
-    if h > 50:
-        return _original_metric_card(c, x, y, w, h, value, label, fill)
-
-    pdf_generator.rounded_box(c, x, y, w, h, fill, 10)
-    centre = x + w / 2
-
-    # Large value occupies the upper zone.
-    c.setFillColor(pdf_generator.INK)
-    c.setFont("Helvetica-Bold", 13.5)
-    c.drawCentredString(centre, y + 25.5, pdf_generator._clean(value))
-
-    # A quiet rule creates a clear visual break between value and label.
-    c.setStrokeColor(pdf_generator.Color(0.82, 0.86, 0.91))
-    c.setLineWidth(0.35)
-    c.line(x + 12, y + 18, x + w - 12, y + 18)
-
-    # Label sits in its own lower zone, away from the value.
-    c.setFillColor(pdf_generator.MID)
-    c.setFont("Helvetica-Bold", 5.5)
-    c.drawCentredString(centre, y + 7.5, pdf_generator._clean(label).upper())
-
-
-pdf_generator.metric_card = _metric_card
 
 from app.main import app  # noqa: E402
 
