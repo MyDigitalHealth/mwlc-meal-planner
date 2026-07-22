@@ -1,15 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/index.py": {
-      "includeFiles": "{source.zip,artifacts/sprint0_parts/**}",
+    "api/phase2_sprint0.py": {
+      "includeFiles": "{source.zip,artifacts/sprint0_parts/**,app/phase2_*.py}",
       "maxDuration": 60
     }
   },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/index.py"
+      "destination": "/api/phase2_sprint0.py"
     }
   ]
 }
