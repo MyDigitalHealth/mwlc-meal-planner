@@ -1,0 +1,76 @@
+name: Bootstrap Sprint 0 Source
+
+on:
+  push:
+    branches: [sprint0-refactor]
+    paths:
+      - .github/workflows/bootstrap-sprint0.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out refactor branch
+        uses: actions/checkout@v4
+        with:
+          ref: sprint0-refactor
+          fetch-depth: 0
+
+      - name: Expand Sprint 0 package and preserve production assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/mwlc_sprint0_source.tar.xz
+          test -f source.zip
+
+          ASSET_TMP="$RUNNER_TEMP/assets_bundle.zip"
+          export ASSET_TMP
+          python - <<'PY'
+          import os
+          import pathlib
+          import shutil
+          import zipfile
+
+          source = pathlib.Path('source.zip')
+          target = pathlib.Path(os.environ['ASSET_TMP'])
+          with zipfile.ZipFile(source) as archive:
+              matches = [name for name in archive.namelist() if name.endswith('app/data/assets_bundle.zip')]
+              if not matches:
+                  matches = [name for name in archive.namelist() if name.endswith('assets_bundle.zip')]
+              if not matches:
+                  raise SystemExit('assets_bundle.zip was not found in source.zip')
+              with archive.open(matches[0]) as src, target.open('wb') as dst:
+                  shutil.copyfileobj(src, dst)
+          print(f'Preserved {target} ({target.stat().st_size} bytes)')
+          PY
+
+          tar -xJf artifacts/mwlc_sprint0_source.tar.xz -C .
+          mkdir -p app/data
+          cp "$ASSET_TMP" app/data/assets_bundle.zip
+
+          rm -f source.zip
+          rm -rf artifacts
+          rm -f .github/workflows/bootstrap-sprint0.yml
+
+      - name: Validate source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest httpx
+          pytest -q
+          test -s app/data/assets_bundle.zip
+
+      - name: Commit expanded Sprint 0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Expand Sprint 0 refactor source"
+          git push origin HEAD:sprint0-refactor
