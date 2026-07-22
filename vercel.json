@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/index.py": {
-      "includeFiles": "source.zip",
+      "includeFiles": "{source.zip,artifacts/sprint0_parts/**}",
       "maxDuration": 60
     }
   },

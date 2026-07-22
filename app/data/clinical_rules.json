@@ -1,0 +1,26 @@
+{
+  "ruleset_version": "2026.1",
+  "phenotype": {
+    "screening_label": "Acosta-informed multidomain screening profile",
+    "bands": [
+      {"minimum": 70, "level": "high", "label": "High priority"},
+      {"minimum": 45, "level": "moderate", "label": "Moderate priority"},
+      {"minimum": 0, "level": "lower", "label": "Lower current signal"}
+    ],
+    "intervention_threshold": 45,
+    "minimum_priority_domains": 2,
+    "disclaimer": "This questionnaire-derived profile is clinical decision support and does not reproduce formal physiological phenotype testing."
+  },
+  "weight_expectation": {
+    "weekly_loss_percent_review_threshold": 1.0,
+    "weekly_loss_kg_review_threshold": 1.25,
+    "minimum_override_reason_characters": 10,
+    "require_practitioner_initials": true,
+    "require_monitoring_confirmation": true
+  },
+  "meal_selection": {
+    "hard_exclusions_override_preferences": true,
+    "maximum_recipe_repeats": 2,
+    "default_red_meat_cap_per_week": 2
+  }
+}
